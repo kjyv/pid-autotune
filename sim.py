@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/env python3
 
 from pid import PIDArduino
 from autotune import PIDAutotune
@@ -89,7 +89,7 @@ def write_csv(sim):
 
 
 def sim_update(sim, timestamp, output, args):
-    sim.kettle.heat(args.heater_power * (output / 100), args.sampletime)
+    sim.kettle.heat(args.heater_power * (output / args.out_max), args.sampletime)
     sim.kettle.cool(args.sampletime, args.ambient_temp, args.heat_loss_factor)
     sim.delayed_temps.append(sim.kettle.temperature)
     sim.timestamps.append(timestamp)
@@ -124,7 +124,7 @@ def plot_simulations(simulations, title):
 
     # Create second y-axis (power)
     ax2 = ax1.twinx()
-    ax2.set_ylabel('power (%)')
+    ax2.set_ylabel('power (W)')
 
     # Plot temperature and output values
     i = 0
@@ -141,8 +141,7 @@ def plot_simulations(simulations, title):
     # Create legend
     labels = [l.get_label() for l in lines]
     offset = math.ceil((1 + len(simulations) * 2) / 3) * 0.05
-    ax1.legend(lines, labels, loc=9, bbox_to_anchor=(
-        0.5, -0.1 - offset), ncol=3)
+    ax1.legend(lines, labels, loc=9, bbox_to_anchor=(0.5, -0.1 - offset), ncol=3)
     fig.subplots_adjust(bottom=0.2 + offset)
 
     # Set title
@@ -180,8 +179,7 @@ def simulate_autotune(args):
                 print()
 
     print('time:    {0} min'.format(round(timestamp / 60)))
-    print('state:   {0}'.format(sim.sut.state))
-    print()
+    print('state:   {0}\n'.format(sim.sut.state))
 
     # On success, print params for each tuning rule
     if sim.sut.state == PIDAutotune.STATE_SUCCEEDED:
@@ -220,7 +218,7 @@ def simulate_pid(args):
         )
         sims.append(sim)
 
-    # Init delayed_temps deque for each simulation
+    # Init delayed_temps dequeue for each simulation
     for sim in sims:
         sim.delayed_temps.extend(sim.delayed_temps.maxlen * [args.kettle_temp])
 
@@ -230,13 +228,13 @@ def simulate_pid(args):
 
         for sim in sims:
             output = sim.sut.calc(sim.delayed_temps[0], args.setpoint)
-            output = max(output, 0)
-            output = min(output, 100)
+            output = max(output, args.out_min)
+            output = min(output, args.out_max)
             sim_update(sim, timestamp, output, args)
 
             if args.verbose > 0:
                 print('time:    {0} sec'.format(timestamp))
-                print('{0}: {1:.2f}%'.format(sim.name, output))
+                print('{0}: {1:.2f} W'.format(sim.name, output))
                 print('temp sensor:    {0:.2f}°C'.format(sim.sensor_temps[-1]))
                 print('temp heater:    {0:.2f}°C'.format(sim.heater_temps[-1]))
         if args.verbose > 0:
