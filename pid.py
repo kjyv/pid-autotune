@@ -65,8 +65,13 @@ class PIDArduino(object):
         # In order to prevent windup, only integrate if the process is not saturated
         if self._last_output < self._out_max and self._last_output > self._out_min:
             self._integral += self._Ki * error
-            self._integral = min(self._integral, self._out_max)
-            self._integral = max(self._integral, self._out_min)
+
+        #limit integral sum to output min/max
+        self._integral = min(self._integral, self._out_max)
+        self._integral = max(self._integral, self._out_min)
+
+        self._integral = min(self._integral, 50)
+        self._integral = max(self._integral, 0)
 
         p = self._Kp * error
         i = self._integral
@@ -74,6 +79,8 @@ class PIDArduino(object):
 
         # Compute PID Output
         self._last_output = p + i + d
+
+        #limit overall output
         self._last_output = min(self._last_output, self._out_max)
         self._last_output = max(self._last_output, self._out_min)
 
