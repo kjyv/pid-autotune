@@ -14,9 +14,14 @@ class Kettle(object):
     SPECIFIC_HEAT_CAP_WATER = 4.182
 
     # thermal conductivity of steel: lambda = 15 W / m * K
-    THERMAL_CONDUCTIVITY_STEEL = 15
+    # (TODO: wrong? should be 25 for stainless or 50 for normal steel)
+    #THERMAL_CONDUCTIVITY_STEEL = 15
 
-    def __init__(self, diameter, volume, temp, density=1):
+    # conductivity of brass, adjusted from 96 for open brass boiler to be less conductive
+    # within boiler enclosure etc.
+    THERMAL_CONDUCTIVITY_STEEL = 50
+
+    def __init__(self, diameter, volume, temp, density=0.997):
         self._mass = volume * density
         self._temp = temp
         radius = diameter / 2
