@@ -2,16 +2,26 @@ import math
 
 
 class Kettle(object):
-    """A simulated brewing kettle.
+    """A simulated kettle.
+    It is assumed the kettle is made from metal (brass) and an electric heating element is sitting inside the
+    kettle and it is submerged in the (fresh) water.
+    The kettle is heated with the heating element and cools from conductivity to the ambient air.
 
     Args:
         diameter (float): Kettle diameter in centimeters.
         volume (float): Content volume in liters.
         temp (float): Initial content temperature in degree celsius.
-        density (float): Content density.
     """
-    # specific heat capacity of water: c = 4.182 kJ / kg * K
-    SPECIFIC_HEAT_CAP_WATER = 4.182
+
+    DENSITY_WATER = 0.997
+
+    # specific heat capacity of water: c = 4.1796 kJ / kg * K (20°C)
+    # 4.2160 (100°)
+    SPECIFIC_HEAT_CAP_WATER = 4.200
+
+    # specific heat capacity of brass: c = 0.387 kJ / kg * K (20°C)
+    # (increased a bit for higher temperature and varying values depending on source)
+    SPECIFIC_HEAT_CAP_BRASS = 0.400
 
     # thermal conductivity of steel: lambda = 15 W / m * K
     # (TODO: wrong? should be 25 for stainless or 50 for normal steel)
@@ -19,10 +29,11 @@ class Kettle(object):
 
     # conductivity of brass, adjusted from 96 for open brass boiler to be less conductive
     # within boiler enclosure etc.
-    THERMAL_CONDUCTIVITY_STEEL = 50
+    THERMAL_CONDUCTIVITY_BRASS = 96
+    THERMAL_CONDUCTIVITY_KETTLE = THERMAL_CONDUCTIVITY_BRASS * 0.5
 
-    def __init__(self, diameter, volume, temp, density=0.997):
-        self._mass = volume * density
+    def __init__(self, diameter, volume, temp, kettleMass):
+        self._waterMass = volume * Kettle.DENSITY_WATER
         self._temp = temp
         radius = diameter / 2
 
@@ -31,6 +42,8 @@ class Kettle(object):
 
         # surface in m^2
         self._surface = (2 * math.pi * math.pow(radius, 2) + 2 * math.pi * radius * height) / 10000
+
+        self._kettleMass = kettleMass
 
     @property
     def temperature(self):
@@ -59,7 +72,7 @@ class Kettle(object):
         """
         # Q = k_w * A * (T_kettle - T_ambient)
         # P = Q / t
-        power = ((Kettle.THERMAL_CONDUCTIVITY_STEEL * self._surface
+        power = ((Kettle.THERMAL_CONDUCTIVITY_KETTLE * self._surface
                  * (self._temp - ambient_temp)) / duration)
 
         # W to kW
@@ -69,6 +82,10 @@ class Kettle(object):
 
     def _get_deltaT(self, power, duration):
         # P = Q / t
-        # Q = c * m * delta T
-        # => delta(T) = (P * t) / (c * m)
-        return ((power * duration) / (Kettle.SPECIFIC_HEAT_CAP_WATER * self._mass))
+        # Q = (c_water * m_water + c_kettle * m_kettle) * delta T
+        # => delta(T) = (P * t) / (c_water * m_water + c_kettle * m_kettle)
+
+        #temperature difference of water after applying power for duration
+        return ((power * duration) / (Kettle.SPECIFIC_HEAT_CAP_WATER * self._waterMass +
+                                      Kettle.SPECIFIC_HEAT_CAP_BRASS * self._kettleMass))
+

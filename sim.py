@@ -62,6 +62,9 @@ def parser_add_args(parser):
     parser.add_argument(
         '--diameter', dest='diameter', metavar='d', default=50.0,
         type=float, help='kettle diameter in cm (default: 50)')
+    parser.add_argument(
+        '--mass', dest="kettle_mass", metavar="m", default=5,
+        type=float, help="kettle metal mass in kg (default: 5)")
 
     parser.add_argument(
         '--power', dest='heater_power', metavar='P', default=6.0,
@@ -161,7 +164,7 @@ def simulate_autotune(args):
         PIDAutotune(
             args.setpoint, 100, args.sampletime, out_min=args.out_min,
             out_max=args.out_max, time=lambda: timestamp),
-        Kettle(args.diameter, args.volume, args.kettle_temp),
+        Kettle(args.diameter, args.volume, args.kettle_temp, args.kettle_mass),
         delayed_temps,
         [], [], [], []
     )
@@ -212,7 +215,7 @@ def simulate_pid(args):
             PIDArduino(
                 args.sampletime, float(pid[1]), float(pid[2]), float(pid[3]),
                 args.out_min, args.out_max, lambda: timestamp),
-            Kettle(args.diameter, args.volume, args.kettle_temp),
+            Kettle(args.diameter, args.volume, args.kettle_temp, args.kettle_mass),
             deque(maxlen=delayed_temps_len),
             [], [], [], []
         )
