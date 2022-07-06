@@ -8,7 +8,7 @@ class PIDArduino(object):
     """A proportional-integral-derivative controller.
 
     Args:
-        sampletime (float): The interval between calc() calls.
+        sampletime (float): The interval between calc() calls (seconds)
         kp (float): Proportional coefficient.
         ki (float): Integral coefficient.
         kd (float): Derivative coefficient.
@@ -17,8 +17,7 @@ class PIDArduino(object):
         time (function): A function which returns the current time in seconds.
     """
 
-    def __init__(self, sampletime, kp, ki, kd, out_min=float('-inf'),
-                 out_max=float('inf'), time=time):
+    def __init__(self, sampletime, kp, ki, kd, out_min=float('-inf'), out_max=float('inf'), time=time):
         if kp is None:
             raise ValueError('kp must be specified')
         if ki is None:
@@ -39,9 +38,14 @@ class PIDArduino(object):
         self._out_max = out_max
         self._integral = 0
         self._last_input = 0
+        self._filtered_input = 0
         self._last_output = 0
         self._last_calc_timestamp = 0
         self._time = time
+
+    def filterInput(self, input_val, alpha=0.75):
+        self._filtered_input = alpha*self._filtered_input + (1-alpha)*input_val
+
 
     def calc(self, input_val, setpoint):
         """Adjusts and holds the given setpoint.
@@ -60,7 +64,11 @@ class PIDArduino(object):
 
         # Compute all the working error variables
         error = setpoint - input_val
-        input_diff = input_val - self._last_input
+
+        old_filtered = self._filtered_input
+        self.filterInput(input_val)
+        #input_diff = input_val - self._last_input
+        input_diff = (self._filtered_input - old_filtered) / (self._sampletime / 1000)
 
         # In order to prevent windup, only integrate if the process is not saturated
         if self._last_output < self._out_max and self._last_output > self._out_min:
